@@ -1,0 +1,27 @@
+{
+  "Comment": "Per-attempt retry gate for the extraction agent's confidence loop. Execution input must be {\"report_id\": \"<id>\", \"max_attempts\": N}. The driver (src/statemachine.py, called from extraction_agent.py) runs this once per attempt BEFORE calling the LLM extraction + validation in Python.",
+  "StartAt": "CheckAttempt",
+  "States": {
+    "CheckAttempt": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:000000000000:function:geo-check-attempt",
+      "Retry": [
+        {"ErrorEquals": ["States.ALL"], "MaxAttempts": 3, "IntervalSeconds": 1, "BackoffRate": 2.0}
+      ],
+      "Catch": [
+        {"ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "GateCheckFailed"}
+      ],
+      "Next": "IsAllowed"
+    },
+    "IsAllowed": {
+      "Type": "Choice",
+      "Choices": [
+        {"Variable": "$.allowed", "BooleanEquals": true, "Next": "AllowAttempt"}
+      ],
+      "Default": "AttemptsExhausted"
+    },
+    "AllowAttempt": {"Type": "Succeed"},
+    "AttemptsExhausted": {"Type": "Succeed"},
+    "GateCheckFailed": {"Type": "Fail", "Error": "AttemptGateCheckFailed"}
+  }
+}

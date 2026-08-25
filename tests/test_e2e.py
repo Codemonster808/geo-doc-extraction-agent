@@ -78,7 +78,10 @@ def test_full_pipeline_quality(gateway_process):
     import os
     os.environ["LLM_PROVIDER"] = "fake"
     from extraction_agent import MAX_ITERATIONS, extract_with_confidence_gate
-    fail_result = extract_with_confidence_gate("e2e-fail-test", "Some report text with no real content.")
+    # Unique per run — the attempt counter is a real DynamoDB counter keyed
+    # by report_id (via the Step Functions gate), so reusing a fixed id
+    # across test runs would inherit a prior run's exhausted count.
+    fail_result = extract_with_confidence_gate(f"e2e-fail-test-{run_id}", "Some report text with no real content.")
 
     # --- resolution: two reports at the SAME site must merge into 1 occurrence ---
     ddb = aws.client("dynamodb")

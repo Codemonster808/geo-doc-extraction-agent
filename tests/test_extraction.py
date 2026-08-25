@@ -56,7 +56,10 @@ def test_confidence_gate_fails_gracefully_not_silently(monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "fake")
     from extraction_agent import MAX_ITERATIONS, extract_with_confidence_gate
 
-    result = extract_with_confidence_gate("RPT-FAIL-TEST", "Some report text.")
+    # unique per run — the attempt counter is a real DynamoDB counter
+    # (via the Step Functions gate), keyed by report_id
+    import uuid
+    result = extract_with_confidence_gate(f"RPT-FAIL-TEST-{uuid.uuid4().hex[:8]}", "Some report text.")
     assert result["status"] == "failed"
     assert result["attempts"] == MAX_ITERATIONS
     assert result["reason"]

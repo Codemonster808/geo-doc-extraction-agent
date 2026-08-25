@@ -132,12 +132,20 @@ def extract_with_confidence_gate(report_id: str, report_text: str) -> dict:
     still fails after MAX_ITERATIONS — never a record that silently
     passed a field it shouldn't have.
     """
+    from statemachine import gate_attempt
+
     llm = get_provider()
     hint = ""
     last_error = None
     retrieved_context = retrieve_relevant_context(report_id, report_text)
 
-    for attempt in range(1, MAX_ITERATIONS + 1):
+    attempt = 0
+    while True:
+        gate = gate_attempt(report_id, MAX_ITERATIONS)  # real Step Functions Choice/Retry/Catch
+        if not gate["allowed"]:
+            break
+        attempt = gate["attempts"]
+
         try:
             raw = extract_fields(llm, retrieved_context, hint=hint)
             record = ExtractedRecord(**raw)
@@ -147,7 +155,7 @@ def extract_with_confidence_gate(report_id: str, report_text: str) -> dict:
             last_error = str(e)
             hint = f"A previous extraction attempt failed validation: {last_error}. Be precise about field types and value ranges."
 
-    return {"status": "failed", "reason": last_error, "attempts": MAX_ITERATIONS, "report_id": report_id}
+    return {"status": "failed", "reason": last_error, "attempts": attempt, "report_id": report_id}
 
 
 def _persist_extraction(report_id: str, record: dict) -> None:

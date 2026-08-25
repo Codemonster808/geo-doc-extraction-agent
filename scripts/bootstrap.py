@@ -10,6 +10,7 @@ from common import aws  # noqa: E402
 BUCKETS = ["geo-docs", "geo-extracted"]
 DEDUP_TABLE = "geo-doc-dedup"
 EXTRACTIONS_TABLE = "geo-extractions"
+ATTEMPTS_TABLE = "geo-extraction-attempts"
 
 
 def ensure_bucket(s3, name: str) -> None:
@@ -45,6 +46,7 @@ def main() -> None:
     ddb = aws.client("dynamodb")
     ensure_table(ddb, DEDUP_TABLE, "content_hash")
     ensure_table(ddb, EXTRACTIONS_TABLE, "report_id")
+    ensure_table(ddb, ATTEMPTS_TABLE, "report_id")
 
     print("Bootstrap complete.")
 
