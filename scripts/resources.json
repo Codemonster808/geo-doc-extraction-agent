@@ -1,0 +1,6 @@
+{
+  "buckets": ["geo-docs", "geo-extracted"],
+  "queues": [],
+  "tables": ["geo-doc-dedup", "geo-extractions", "geo-extraction-attempts"],
+  "functions": ["geo-check-attempt"]
+}

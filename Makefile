@@ -1,31 +1,44 @@
-.PHONY: demo test e2e eval resolve check-env build-gateway
+SHELL := /bin/bash
+.PHONY: demo demo-full test e2e eval resolve check-env build-gateway inspect query
+
+ENV := set -a && source ./env.sh --quiet && set +a
+
+DEMO_REPORTS ?= 15
+DEMO_FULL_REPORTS ?= 15
 
 check-env:
-	python3 scripts/check_env.py
+	$(ENV) && python3 scripts/check_env.py
+
+inspect:
+	$(ENV) && python3 scripts/aws_inspect.py all
 
 build-gateway:
 	cd src/gateway && go build ./...
 
 demo: build-gateway
-	docker compose up -d
-	python3 scripts/bootstrap.py
-	python3 src/data_gen.py --reports 15 --out data
-	VECTOR_BACKEND=chroma python3 src/index_docs.py --in data/reports
+	$(ENV) && docker compose up -d
+	$(ENV) && python3 scripts/bootstrap.py
+	$(ENV) && python3 src/data_gen.py --reports $(DEMO_REPORTS) --out data
+	$(ENV) && VECTOR_BACKEND=chroma python3 src/index_docs.py --in data/reports
+	$(ENV) && python3 src/statemachine.py
+
+demo-full:
+	$(MAKE) demo DEMO_REPORTS=$(DEMO_FULL_REPORTS)
 
 test: build-gateway
-	pytest tests/ -v --ignore=tests/test_e2e.py
+	$(ENV) && pytest tests/ -v --ignore=tests/test_e2e.py
 
 e2e: build-gateway
-	pytest tests/test_e2e.py -v -s
+	$(ENV) && pytest tests/test_e2e.py -v -s
 
 eval:
-	VECTOR_BACKEND=chroma LLM_PROVIDER=minimax python3 src/eval.py
+	$(ENV) && VECTOR_BACKEND=chroma LLM_PROVIDER=minimax python3 src/eval.py
 
 resolve:
-	python3 src/resolve.py
+	$(ENV) && python3 src/resolve.py
 
 query:
-	python3 -c "import sys; sys.path.insert(0,'src'); from common import warehouse; \
+	$(ENV) && python3 -c "import sys; sys.path.insert(0,'src'); from common import warehouse; \
 	con = warehouse.connect(); \
 	warehouse.read_parquet(con, 's3://geo-extracted/occurrences/**/*.parquet', 'occurrences'); \
 	print(con.execute(open('sql/occurrences_by_region.sql').read()).fetchall())"
