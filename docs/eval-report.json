@@ -1,0 +1,204 @@
+{
+  "n_reports": 15,
+  "n_extracted": 15,
+  "schema_conformance_rate": 1.0,
+  "field_level_precision": 1.0,
+  "avg_attempts": 1.0,
+  "results": [
+    {
+      "report_id": "RPT-000",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-001",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-002",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-003",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-004",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-005",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-006",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-007",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-008",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-009",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-010",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-011",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-012",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-013",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    },
+    {
+      "report_id": "RPT-014",
+      "status": "extracted",
+      "attempts": 1,
+      "field_matches": {
+        "mineral": true,
+        "depth_m": true,
+        "lat": true,
+        "lon": true,
+        "grade_g_t": true,
+        "hole_id": true
+      }
+    }
+  ]
+}
