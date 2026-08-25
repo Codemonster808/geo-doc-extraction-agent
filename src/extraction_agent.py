@@ -15,6 +15,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pydantic import BaseModel, ValidationError, field_validator  # noqa: E402
 
 from common.llm import get_provider  # noqa: E402
+from common.vectors import get_vector_store  # noqa: E402
+
+# A fixed retrieval query targeting the fact-bearing sentences in a
+# geological report — RAG here isn't "answer this specific question",
+# it's "surface the passages likely to contain the structured fields",
+# so a single well-chosen query works across all reports.
+RETRIEVAL_QUERY = "mineral occurrence depth coordinates assay grade drill hole"
+# These synthetic reports are short (~5 sentences) and split the facts
+# across 2 distinct sentences (mineral/depth/grade/hole_id in one,
+# coordinates in another) — top_k=3 measurably missed the coordinates
+# sentence in testing, silently dropping lat/lon from every extraction.
+# 4 keeps genuine filtering (excludes the boilerplate closing sentence)
+# while reliably covering both fact-bearing sentences.
+RETRIEVAL_TOP_K = 4
 
 VALID_MINERALS = {"Copper", "Gold", "Silver", "Zinc", "Lithium", "Nickel"}
 LAT_BOUNDS = (-30.0, -15.0)  # a bit wider than the generator's range, for validator slack
@@ -67,6 +81,39 @@ def _extract_json(llm_output: str) -> dict:
     return json.loads(match.group(0))
 
 
+def retrieve_relevant_context(report_id: str, fallback_text: str) -> str:
+    """
+    Retrieves the top-k chunks of THIS report most relevant to
+    extraction, instead of handing the LLM the entire raw text. Falls
+    back to the full text if the vector store has nothing indexed for
+    this report (e.g. index_docs.py wasn't run) — extraction should
+    degrade gracefully, not hard-fail on a missing index.
+    """
+    try:
+        from sentence_transformers import SentenceTransformer
+        model = retrieve_relevant_context._model if hasattr(retrieve_relevant_context, "_model") \
+            else SentenceTransformer("all-MiniLM-L6-v2")
+        retrieve_relevant_context._model = model
+
+        store = get_vector_store("geo_reports")
+        query_embedding = model.encode([RETRIEVAL_QUERY])[0].tolist()
+        # Scoped to this report's own chunks via `where` — an unscoped
+        # global query would rank this report's best chunk against every
+        # other report's near-identical sentences, and it can lose (see
+        # common/vectors.py docstring for the bug this fixes).
+        top = store.query(query_embedding, top_k=RETRIEVAL_TOP_K, where={"report_id": report_id})
+        if not top:
+            return fallback_text
+        # metadata only carries report_id/chunk_index — reconstruct order but not text,
+        # so re-split the fallback text and pick the retrieved indices' sentences.
+        import re as _re
+        sentences = [s.strip() for s in _re.split(r"(?<=[.\n])\s+", fallback_text) if s.strip()]
+        indices = sorted(r["metadata"]["chunk_index"] for r in top if r["metadata"]["chunk_index"] < len(sentences))
+        return " ".join(sentences[i] for i in indices) or fallback_text
+    except Exception:
+        return fallback_text
+
+
 def extract_fields(llm, report_text: str, hint: str = "") -> dict:
     prompt = (
         "Extract the following fields from this geological survey report as a single JSON object "
@@ -74,7 +121,7 @@ def extract_fields(llm, report_text: str, hint: str = "") -> dict:
         + (f"Note: {hint}\n" if hint else "")
         + f"\nReport:\n{report_text}\n\nReturn only the JSON object, nothing else."
     )
-    response = llm.complete(prompt, max_tokens=300)
+    response = llm.complete(prompt, max_tokens=600)
     return _extract_json(response)
 
 
@@ -88,14 +135,35 @@ def extract_with_confidence_gate(report_id: str, report_text: str) -> dict:
     llm = get_provider()
     hint = ""
     last_error = None
+    retrieved_context = retrieve_relevant_context(report_id, report_text)
 
     for attempt in range(1, MAX_ITERATIONS + 1):
         try:
-            raw = extract_fields(llm, report_text, hint=hint)
+            raw = extract_fields(llm, retrieved_context, hint=hint)
             record = ExtractedRecord(**raw)
+            _persist_extraction(report_id, record.model_dump())
             return {"status": "extracted", "record": record.model_dump(), "attempts": attempt}
         except (ValidationError, ValueError, json.JSONDecodeError) as e:
             last_error = str(e)
             hint = f"A previous extraction attempt failed validation: {last_error}. Be precise about field types and value ranges."
 
     return {"status": "failed", "reason": last_error, "attempts": MAX_ITERATIONS, "report_id": report_id}
+
+
+def _persist_extraction(report_id: str, record: dict) -> None:
+    """Writes a successfully validated extraction to DynamoDB — the
+    table src/resolve.py's cross-document entity resolution reads from."""
+    from common import aws
+    ddb = aws.client("dynamodb")
+    ddb.put_item(
+        TableName="geo-extractions",
+        Item={
+            "report_id": {"S": report_id},
+            "mineral": {"S": record["mineral"]},
+            "depth_m": {"N": str(record["depth_m"])},
+            "lat": {"N": str(record["lat"])},
+            "lon": {"N": str(record["lon"])},
+            "grade_g_t": {"N": str(record["grade_g_t"])},
+            "hole_id": {"S": record["hole_id"]},
+        },
+    )

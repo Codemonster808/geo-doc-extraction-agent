@@ -44,7 +44,7 @@ def main() -> None:
     print("DynamoDB tables:")
     ddb = aws.client("dynamodb")
     ensure_table(ddb, DEDUP_TABLE, "content_hash")
-    ensure_table(ddb, EXTRACTIONS_TABLE, "doc_id")
+    ensure_table(ddb, EXTRACTIONS_TABLE, "report_id")
 
     print("Bootstrap complete.")
 
