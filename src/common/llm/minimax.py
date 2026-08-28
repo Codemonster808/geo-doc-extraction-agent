@@ -5,10 +5,14 @@ so this uses the `openai` client, not the Anthropic SDK.
 Costs real money per call (~$0.30/M input tokens, ~$1.20/M output as of
 this writing) — only reached when LLM_PROVIDER=minimax, e.g. `make eval`.
 """
-import os
 import re
+import sys
+from pathlib import Path
 
 from openai import OpenAI
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from common.secrets import get_secret  # noqa: E402
 
 _MODEL = "MiniMax-M3"
 _BASE_URL = "https://api.minimax.io/v1"
@@ -23,11 +27,13 @@ _MIN_TOKENS_FOR_THINKING_HEADROOM = 300
 
 class MiniMaxLLMProvider:
     def __init__(self) -> None:
-        api_key = os.environ.get("MINIMAX_API_KEY")
+        api_key = get_secret("geo/minimax-api-key", "MINIMAX_API_KEY")
         if not api_key:
             raise RuntimeError(
-                "MINIMAX_API_KEY not set. Copy it from ~/.config/de-portfolio/.env "
-                "or export it before running with LLM_PROVIDER=minimax."
+                "No minimax API key found in Secrets Manager (geo/minimax-api-key) or "
+                "MINIMAX_API_KEY. Run scripts/secrets_setup.py, or copy the key from "
+                "~/.config/de-portfolio/.env and export it before running with "
+                "LLM_PROVIDER=minimax."
             )
         self._client = OpenAI(api_key=api_key, base_url=_BASE_URL)
 

@@ -87,6 +87,10 @@ aws lambda get-function --function-name geo-check-attempt --query 'Configuration
 SM_ARN=$(aws stepfunctions list-state-machines --query "stateMachines[0].stateMachineArn" --output text)
 EXEC_ARN=$(aws stepfunctions list-executions --state-machine-arn "$SM_ARN" --max-results 1 --query "executions[0].executionArn" --output text)
 aws stepfunctions get-execution-history --execution-arn "$EXEC_ARN"
+
+# Secrets Manager — el secreto real detrás de MINIMAX_API_KEY / PINECONE_API_KEY
+aws secretsmanager list-secrets --query 'SecretList[*].Name'
+aws secretsmanager get-secret-value --secret-id geo/minimax-api-key --query SecretString --output text
 ```
 
 **Qué mirar que `aws_inspect.py` no te muestra:** cuántas veces se repite el ciclo `TaskStateEntered`/`ChoiceStateEntered` en `get-execution-history` antes del `ExecutionSucceeded` final — ese conteo es el número real de reintentos del confidence gate, no solo el campo `iterations` que devuelve la función Python.
@@ -157,6 +161,21 @@ El record con lat/lon fuera del bounding box **no** aparece en `geo-extractions`
 <details><summary>Verificar</summary>
 
 Antes: `ResourceNotFoundException` (no existe). Después: `State=Active`, con un `LastModified` de hace segundos. Es la misma distinción que hace `aws_inspect.py` con el mensaje "not deployed yet", pero viendo el código de error real (`ResourceNotFoundException`) en vez del texto ya traducido por el script.
+</details>
+
+**4. Mueve un secreto de `.env` a Secrets Manager y confirma que `make demo` no se entera**
+
+```bash
+export MINIMAX_API_KEY="lo-que-tengas-en-.env"
+python3 scripts/secrets_setup.py
+aws secretsmanager get-secret-value --secret-id geo/minimax-api-key --query SecretString --output text
+unset MINIMAX_API_KEY
+LLM_PROVIDER=fake make demo   # sigue funcionando: no necesita ningún secreto
+```
+
+<details><summary>Verificar</summary>
+
+`get_secret()` (`src/common/secrets.py`) intenta Secrets Manager primero y solo cae a la variable de entorno si el secreto no existe ahí — por eso `unset MINIMAX_API_KEY` no rompe nada una vez que `secrets_setup.py` sembró el secreto real. `LLM_PROVIDER=fake` nunca llama `MiniMaxLLMProvider` en absoluto, así que ni siquiera toca Secrets Manager — el fallback existe para no bloquear a alguien que todavía no corrió `secrets_setup.py`, no para el camino feliz con `fake`. Esta es la diferencia real entre "el secreto vive en Secrets Manager" y "el secreto vive en un archivo `.env` en disco": el primero es lo que verías en un ECS task real con `secrets` en la task definition.
 </details>
 
 ---

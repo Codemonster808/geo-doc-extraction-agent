@@ -5,6 +5,8 @@ Vector store adapter: VECTOR_BACKEND=chroma (default, free, local) or
 import os
 from typing import Protocol
 
+from common.secrets import get_secret
+
 
 class VectorStore(Protocol):
     def upsert(self, ids: list[str], embeddings: list[list[float]], metadatas: list[dict]) -> None: ...
@@ -38,9 +40,13 @@ class ChromaVectorStore:
 class PineconeVectorStore:
     def __init__(self, index_name: str = "portfolio") -> None:
         from pinecone import Pinecone
-        api_key = os.environ.get("PINECONE_API_KEY")
+        api_key = get_secret("geo/pinecone-api-key", "PINECONE_API_KEY")
         if not api_key:
-            raise RuntimeError("PINECONE_API_KEY not set — required for VECTOR_BACKEND=pinecone")
+            raise RuntimeError(
+                "No Pinecone API key found in Secrets Manager (geo/pinecone-api-key) or "
+                "PINECONE_API_KEY — required for VECTOR_BACKEND=pinecone. Run "
+                "scripts/secrets_setup.py or set the env var."
+            )
         self._index = Pinecone(api_key=api_key).Index(index_name)
 
     def upsert(self, ids, embeddings, metadatas) -> None:

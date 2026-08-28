@@ -64,6 +64,7 @@ The intake gateway validates, rate-limits, and dedupes by content hash before a 
 | S3 / Lambda / DynamoDB | [MiniStack](https://ministack.org) (free, MIT, no account) | AWS | High |
 | Step Functions | MiniStack (full ASL interpreter) | AWS | Medium-High |
 | AWS CLI v2 | Real `aws` CLI against MiniStack (`AWS_ENDPOINT_URL`) — see `docs/RUNBOOK.md` §2 | AWS CLI v2 | High |
+| Secrets Manager | MiniStack — `MINIMAX_API_KEY`/`PINECONE_API_KEY` are stored via `scripts/secrets_setup.py` and read through `common/secrets.get_secret()`, which falls back to the env var only if the secret isn't there | AWS Secrets Manager | High — `create-secret`/`get-secret-value` round-trip correctly; see `docs/RUNBOOK.md` §5 ex. 4 |
 | Redshift | **DuckDB**, reading the resolved-entity Parquet directly from S3 | Redshift Serverless | Medium — no MPP distribution; real DDL in `sql/redshift/` |
 | Vector store | Chroma (`VECTOR_BACKEND=chroma`) or real Pinecone (`=pinecone`) | Pinecone | High — same interface |
 | LLM | Deterministic fake (`LLM_PROVIDER=fake`) | Real [MiniMax M3](https://minimax-ai.chat/docs/api/) (`=minimax`) | Precision/recall in the README are measured with the real provider |
