@@ -17,7 +17,7 @@ pip install -r requirements.txt
 go version   # 1.21+
 cp ~/.config/de-portfolio/.env .env   # MINIMAX_API_KEY, PINECONE_API_KEY
 docker compose up -d
-curl http://localhost:4566/_health
+curl http://localhost:4585/_health
 ```
 
 ## 1. Get the environment running (45 min) → checkpoint: `make check-env`
