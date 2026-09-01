@@ -14,8 +14,8 @@ source env.sh
 docker compose up -d
 make check-env
 python3 scripts/bootstrap.py
-cd src/gateway && go build ./... && cd ../..
-python3 src/statemachine.py    # gate de intentos vía Step Functions
+cd src/ingestion/gateway && go build ./... && cd ../../..
+python3 src/orchestration/statemachine.py    # gate de intentos vía Step Functions
 python3 scripts/aws_inspect.py all
 ```
 
@@ -26,7 +26,7 @@ python3 scripts/aws_inspect.py all
 ### 1.1 Reportes sintéticos + ground truth
 
 ```bash
-python3 src/data_gen.py --reports 15 --out data --seed 42
+python3 src/ingestion/data_gen.py --reports 15 --out data --seed 42
 ls data/reports
 python3 -c "import json; print(json.load(open('data/_ground_truth.json'))[0]['ground_truth'])"
 ```
@@ -36,10 +36,10 @@ Cada `.txt` tiene mineral, depth, lat/lon, grade, hole_id embebidos. El JSON es 
 ### 1.2 Indexar chunks (RAG scoped por documento)
 
 ```bash
-VECTOR_BACKEND=chroma python3 src/index_docs.py --in data/reports
+VECTOR_BACKEND=chroma python3 src/ingestion/index_docs.py --in data/reports
 ```
 
-**Qué entender:** retrieval **sin** `where=report_id` mezclaba 15 reportes casi idénticos y perdía las coordenadas. El bug está documentado en `common/vectors.py`.
+**Qué entender:** retrieval **sin** `where=report_id` mezclaba 15 reportes casi idénticos y perdía las coordenadas. El bug está documentado en `utils/vectors.py`.
 
 ### 1.3 Extraer un reporte y persistir
 
@@ -47,7 +47,7 @@ VECTOR_BACKEND=chroma python3 src/index_docs.py --in data/reports
 python3 - <<'PY'
 import json, sys
 sys.path.insert(0, "src")
-from extraction_agent import extract_with_confidence_gate
+from models.extraction_agent import extract_with_confidence_gate
 reports = json.load(open("data/_ground_truth.json"))
 r = reports[0]
 print(extract_with_confidence_gate(r["report_id"], r["text"]))
@@ -61,15 +61,15 @@ python3 scripts/aws_inspect.py sfn
 ### 1.4 Resolver entidades cross-doc + eval
 
 ```bash
-python3 src/resolve.py
-LLM_PROVIDER=fake VECTOR_BACKEND=chroma python3 src/eval.py --data data
+python3 src/transformation/resolve.py
+LLM_PROVIDER=fake VECTOR_BACKEND=chroma python3 scripts/eval.py --data data
 ```
 
 ---
 
 ## 2. Explorar con AWS CLI
 
-`aws` respeta `AWS_ENDPOINT_URL` (exportado por `env.sh`), sin flags extra. P5 no usa SNS/SQS — el intake pasa por el gateway Go (`src/gateway`) directo a S3, y el gate de reintentos vive en Step Functions + Lambda.
+`aws` respeta `AWS_ENDPOINT_URL` (exportado por `env.sh`), sin flags extra. P5 no usa SNS/SQS — el intake pasa por el gateway Go (`src/ingestion/gateway`) directo a S3, y el gate de reintentos vive en Step Functions + Lambda.
 
 ```bash
 # S3 — solo se llena si pasaste por el gateway Go (curl al intake), no en el flujo directo de Python de la sección 1
@@ -108,7 +108,7 @@ rm -rf .chroma
 python3 - <<'PY'
 import json, sys
 sys.path.insert(0, "src")
-from extraction_agent import extract_with_confidence_gate
+from models.extraction_agent import extract_with_confidence_gate
 r = json.load(open("data/_ground_truth.json"))[0]
 print(extract_with_confidence_gate(r["report_id"], r["text"]))
 PY
@@ -128,7 +128,7 @@ El validador Pydantic rechaza lat/lon fuera del bounding box de la encuesta. Un 
 |---|---|
 | `ResourceNotFoundException` en DDB | Falta bootstrap **o** env.sh. Histórico: la tabla se creó con PK `doc_id` y el código usaba `report_id`. |
 | Retrieval vacío | No corriste `index_docs.py` o `VECTOR_BACKEND` distinto entre index y extract |
-| MiniMax `<think>` en JSON | Ya se limpia en `common/llm/minimax.py`; si parsea mal, estás en un proveedor viejo |
+| MiniMax `<think>` en JSON | Ya se limpia en `utils/llm/minimax.py`; si parsea mal, estás en un proveedor viejo |
 | IDs fijos en DDB | Contadores persisten entre corridas — usa report_ids nuevos o `uuid` |
 | S3 vacío pese a `make demo` | Normal si no pasaste por el gateway Go — el flujo de la sección 1 llama `extraction_agent` directo en Python |
 
@@ -147,7 +147,7 @@ El número de ejecuciones (`SUCCEEDED`) para esa máquina coincide con `attempts
 
 **2. Verifica con `aws dynamodb scan` que el schema rechaza coordenadas fuera de rango, no solo que el test pasa**
 
-Corre `pytest tests/test_extraction.py::test_coordinate_outside_survey_region_rejected -v`, luego revisa si ese record llegó a `geo-extractions`.
+Corre `pytest tests/unit/test_extraction.py::test_coordinate_outside_survey_region_rejected -v`, luego revisa si ese record llegó a `geo-extractions`.
 
 <details><summary>Verificar</summary>
 
@@ -156,7 +156,7 @@ El record con lat/lon fuera del bounding box **no** aparece en `geo-extractions`
 
 **3. Lee el estado real de la función Lambda antes vs. después de `statemachine.py`**
 
-`aws lambda get-function --function-name geo-check-attempt` **antes** de correr `python3 src/statemachine.py`, y otra vez después.
+`aws lambda get-function --function-name geo-check-attempt` **antes** de correr `python3 src/orchestration/statemachine.py`, y otra vez después.
 
 <details><summary>Verificar</summary>
 
@@ -175,7 +175,7 @@ LLM_PROVIDER=fake make demo   # sigue funcionando: no necesita ningún secreto
 
 <details><summary>Verificar</summary>
 
-`get_secret()` (`src/common/secrets.py`) intenta Secrets Manager primero y solo cae a la variable de entorno si el secreto no existe ahí — por eso `unset MINIMAX_API_KEY` no rompe nada una vez que `secrets_setup.py` sembró el secreto real. `LLM_PROVIDER=fake` nunca llama `MiniMaxLLMProvider` en absoluto, así que ni siquiera toca Secrets Manager — el fallback existe para no bloquear a alguien que todavía no corrió `secrets_setup.py`, no para el camino feliz con `fake`. Esta es la diferencia real entre "el secreto vive en Secrets Manager" y "el secreto vive en un archivo `.env` en disco": el primero es lo que verías en un ECS task real con `secrets` en la task definition.
+`get_secret()` (`src/utils/secrets.py`) intenta Secrets Manager primero y solo cae a la variable de entorno si el secreto no existe ahí — por eso `unset MINIMAX_API_KEY` no rompe nada una vez que `secrets_setup.py` sembró el secreto real. `LLM_PROVIDER=fake` nunca llama `MiniMaxLLMProvider` en absoluto, así que ni siquiera toca Secrets Manager — el fallback existe para no bloquear a alguien que todavía no corrió `secrets_setup.py`, no para el camino feliz con `fake`. Esta es la diferencia real entre "el secreto vive en Secrets Manager" y "el secreto vive en un archivo `.env` en disco": el primero es lo que verías en un ECS task real con `secrets` en la task definition.
 </details>
 
 ---

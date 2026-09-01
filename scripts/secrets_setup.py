@@ -7,9 +7,10 @@
 Only seeds a secret if its env var is actually set — this script is
 meant to be safe to run in CI or a fresh `LLM_PROVIDER=fake` checkout
 where MINIMAX_API_KEY/PINECONE_API_KEY don't exist and don't need to.
-After this runs, common/secrets.get_secret() reads from Secrets Manager
+After this runs, utils/secrets.get_secret() reads from Secrets Manager
 instead of falling back to the env var directly.
 """
+
 from __future__ import annotations
 
 import os
@@ -19,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from common import aws  # noqa: E402
+from utils import aws  # noqa: E402
 
 SECRETS = {
     "geo/minimax-api-key": "MINIMAX_API_KEY",

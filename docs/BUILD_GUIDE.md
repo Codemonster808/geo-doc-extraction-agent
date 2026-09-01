@@ -33,14 +33,14 @@ make check-env
 Write 15 synthetic geological report "documents" (plain text is fine, no need for real scanned PDFs) containing embedded facts like "Drill hole DH-14 intersected 2.1 g/t Au at 145m depth, coordinates -23.45, -68.90." Hand-label the ground truth fields for each (`mineral`, `depth_m`, `lat`, `lon`, `grade`) in a JSON file.
 
 ```bash
-python3 src/data_gen.py --reports 15 --out data/
+python3 src/ingestion/data_gen.py --reports 15 --out data/
 make check-data   # "OK: 15 reports, 15 label sets, all fields present"
 ```
 
 ## 3. Build the Go intake gateway (2-3 h) → checkpoint: `make check-gateway`
 
 ```bash
-cd src/gateway && go build ./...
+cd src/ingestion/gateway && go build ./...
 make check-gateway   # asserts duplicate content is rejected, malformed uploads are rejected
 ```
 

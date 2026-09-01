@@ -1,5 +1,5 @@
 {
-  "Comment": "Per-attempt retry gate for the extraction agent's confidence loop. Execution input must be {\"report_id\": \"<id>\", \"max_attempts\": N}. The driver (src/statemachine.py, called from extraction_agent.py) runs this once per attempt BEFORE calling the LLM extraction + validation in Python.",
+  "Comment": "Per-attempt retry gate for the extraction agent's confidence loop. Execution input must be {\"report_id\": \"<id>\", \"max_attempts\": N}. The driver (src/orchestration/statemachine.py, called from src/models/extraction_agent.py) runs this once per attempt BEFORE calling the LLM extraction + validation in Python.",
   "StartAt": "CheckAttempt",
   "States": {
     "CheckAttempt": {

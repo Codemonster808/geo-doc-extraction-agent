@@ -20,9 +20,30 @@ jobs:
         with:
           go-version: "1.23"
       - run: pip install -r requirements.txt
-      - run: cd src/gateway && go build ./...
+      - run: cd src/ingestion/gateway && go build ./...
       - run: python3 scripts/bootstrap.py
-      - run: pytest tests/ -v --ignore=tests/test_e2e.py
+      - run: pytest tests/ features/ -v --ignore=tests/data_quality --cov=src --cov-report=term --cov-report=xml --cov-fail-under=50
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+      - run: pip install pip-audit
+      - run: pip-audit -r requirements.txt
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+      - name: Run gosec on gateway
+        run: cd src/ingestion/gateway && "$(go env GOPATH)/bin/gosec" ./...
 
   e2e:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -44,9 +65,9 @@ jobs:
         with:
           go-version: "1.23"
       - run: pip install -r requirements.txt
-      - run: cd src/gateway && go build ./...
+      - run: cd src/ingestion/gateway && go build ./...
       - run: python3 scripts/bootstrap.py
-      - run: pytest tests/test_e2e.py -v -s
+      - run: pytest tests/data_quality/test_e2e.py -v -s
       - uses: actions/upload-artifact@v4
         with:
           name: quality-report

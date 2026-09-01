@@ -1,5 +1,9 @@
 # geo-doc-extraction-agent
 
+[![CI](https://github.com/Codemonster808/geo-doc-extraction-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Codemonster808/geo-doc-extraction-agent/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-53%25-yellow)](https://github.com/Codemonster808/geo-doc-extraction-agent/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A confidence-gated extraction agent that turns unstructured geological survey reports into a queryable, schema-validated dataset.
 
 ## Pitch Card
@@ -42,11 +46,11 @@ The intake gateway validates, rate-limits, and dedupes by content hash before a 
 
 | Metric | Value | How it's measured |
 |---|---|---|
-| Field-level precision (15 reports × 6 fields = 90 fields) | **1.0** (90/90 correct) | `LLM_PROVIDER=minimax python3 src/eval.py` |
+| Field-level precision (15 reports × 6 fields = 90 fields) | **1.0** (90/90 correct) | `LLM_PROVIDER=minimax python3 scripts/eval.py` |
 | Schema conformance rate | **1.0** (15/15) | same eval run |
 | Avg extraction attempts per report | 1.0 (no retries needed — clean synthetic text) | same eval run |
-| Confidence-gate failure path (provider that never produces valid JSON) | **fails gracefully after exactly 2 attempts**, reports a reason, never a silently-invalid record | `pytest tests/test_extraction.py::test_confidence_gate_fails_gracefully_not_silently` |
-| Domain schema catches out-of-region coordinates | **verified**: a lat/lon outside the survey bounding box is rejected even though it type-checks | `pytest tests/test_extraction.py::test_coordinate_outside_survey_region_rejected` |
+| Confidence-gate failure path (provider that never produces valid JSON) | **fails gracefully after exactly 2 attempts**, reports a reason, never a silently-invalid record | `pytest tests/unit/test_extraction.py::test_confidence_gate_fails_gracefully_not_silently` |
+| Domain schema catches out-of-region coordinates | **verified**: a lat/lon outside the survey bounding box is rejected even though it type-checks | `pytest tests/unit/test_extraction.py::test_coordinate_outside_survey_region_rejected` |
 | Intake gateway dedup (Go/Gin + DynamoDB conditional write) | **verified live**: identical content under a different `report_id` → 409 | manual curl test, see BUILD_GUIDE |
 
 **Why this scores higher than `agentic-claims-copilot`'s retrieval numbers:** this is direct fact extraction from explicit, unambiguous text ("intersected 1.19 g/t Nickel at a depth of 77m") — a much easier task for an LLM than semantic retrieval over paraphrased claim language against a small local embedding model. A perfect score here and a modest 0.17 there are both honest results of tasks with genuinely different difficulty, not inconsistent quality.
@@ -64,7 +68,7 @@ The intake gateway validates, rate-limits, and dedupes by content hash before a 
 | S3 / Lambda / DynamoDB | [MiniStack](https://ministack.org) (free, MIT, no account) | AWS | High |
 | Step Functions | MiniStack (full ASL interpreter) | AWS | Medium-High |
 | AWS CLI v2 | Real `aws` CLI against MiniStack (`AWS_ENDPOINT_URL`) — see `docs/RUNBOOK.md` §2 | AWS CLI v2 | High |
-| Secrets Manager | MiniStack — `MINIMAX_API_KEY`/`PINECONE_API_KEY` are stored via `scripts/secrets_setup.py` and read through `common/secrets.get_secret()`, which falls back to the env var only if the secret isn't there | AWS Secrets Manager | High — `create-secret`/`get-secret-value` round-trip correctly; see `docs/RUNBOOK.md` §5 ex. 4 |
+| Secrets Manager | MiniStack — `MINIMAX_API_KEY`/`PINECONE_API_KEY` are stored via `scripts/secrets_setup.py` and read through `utils/secrets.get_secret()`, which falls back to the env var only if the secret isn't there | AWS Secrets Manager | High — `create-secret`/`get-secret-value` round-trip correctly; see `docs/RUNBOOK.md` §5 ex. 4 |
 | Redshift | **DuckDB**, reading the resolved-entity Parquet directly from S3 | Redshift Serverless | Medium — no MPP distribution; real DDL in `sql/redshift/` |
 | Vector store | Chroma (`VECTOR_BACKEND=chroma`) or real Pinecone (`=pinecone`) | Pinecone | High — same interface |
 | LLM | Deterministic fake (`LLM_PROVIDER=fake`) | Real [MiniMax M3](https://minimax-ai.chat/docs/api/) (`=minimax`) | Precision/recall in the README are measured with the real provider |
@@ -80,7 +84,7 @@ The intake gateway validates, rate-limits, and dedupes by content hash before a 
 ```bash
 source env.sh
 make demo   # 15 synthetic geological reports (docs/RUNBOOK.md)
-pytest tests/test_schema_conformance.py
+pytest tests/unit/test_extraction.py
 make query
 ```
 

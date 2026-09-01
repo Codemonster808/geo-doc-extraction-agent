@@ -10,5 +10,9 @@ target/
 .env
 .DS_Store
 src/gate/gate
-src/gateway/gateway
+src/ingestion/gateway/gateway
 .chroma/
+
+# Personal interview-prep notes — never pushed
+docs/INTERVIEW_PREP.md
+docs/LEARNING_BUILD.md

@@ -1,0 +1,36 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".venv", "data", "benchmarks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+
+[tool.mypy]
+python_version = "3.12"
+# src/ has no top-level __init__.py; code imports "models.x" / "utils.x"
+# directly (see sys.path.insert(0, "src") in tests/conftest.py), so point
+# mypy at src/ the same way instead of treating it as the "src" package.
+mypy_path = "src"
+explicit_package_bases = true
+# pyspark/boto3/chromadb/pinecone/pypdf/pytesseract ship no type stubs
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["models.*", "utils.*"]
+disallow_untyped_defs = true
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 50
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
