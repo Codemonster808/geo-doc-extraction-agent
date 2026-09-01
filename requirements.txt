@@ -30,7 +30,7 @@ filelock==3.32.5
 flatbuffers==25.12.19
 frozenlist==1.8.0
 fsspec==2026.7.0
-gherkin-official==29.0.0
+gherkin-official==42.0.1
 googleapis-common-protos==1.75.2
 grpcio==1.83.1
 h11==0.16.0
