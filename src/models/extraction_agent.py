@@ -9,13 +9,16 @@ confidence is low — not blindly, and not never.
 import json
 import re
 import sys
+from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from pydantic import BaseModel, ValidationError, field_validator  # noqa: E402
 
-from utils.llm import get_provider  # noqa: E402
+from models.llm import get_provider  # noqa: E402
+from models.llm.base import LLMClient  # noqa: E402
 from utils.vectors import get_vector_store  # noqa: E402
 
 # A fixed retrieval query targeting the fact-bearing sentences in a
@@ -48,28 +51,28 @@ class ExtractedRecord(BaseModel):
 
     @field_validator("mineral")
     @classmethod
-    def mineral_must_be_known(cls, v):
+    def mineral_must_be_known(cls, v: str) -> str:
         if v not in VALID_MINERALS:
             raise ValueError(f"'{v}' is not a recognized mineral")
         return v
 
     @field_validator("depth_m")
     @classmethod
-    def depth_must_be_plausible(cls, v):
+    def depth_must_be_plausible(cls, v: float) -> float:
         if not (0 < v <= MAX_DEPTH_M):
             raise ValueError(f"depth_m={v} is out of plausible range (0, {MAX_DEPTH_M}]")
         return v
 
     @field_validator("lat")
     @classmethod
-    def lat_in_bounds(cls, v):
+    def lat_in_bounds(cls, v: float) -> float:
         if not (LAT_BOUNDS[0] <= v <= LAT_BOUNDS[1]):
             raise ValueError(f"lat={v} outside survey region bounds {LAT_BOUNDS}")
         return v
 
     @field_validator("lon")
     @classmethod
-    def lon_in_bounds(cls, v):
+    def lon_in_bounds(cls, v: float) -> float:
         if not (LON_BOUNDS[0] <= v <= LON_BOUNDS[1]):
             raise ValueError(f"lon={v} outside survey region bounds {LON_BOUNDS}")
         return v
@@ -82,6 +85,18 @@ def _extract_json(llm_output: str) -> dict:
     return json.loads(match.group(0))
 
 
+@lru_cache(maxsize=1)
+def _embedding_model() -> Any:
+    """Loading all-MiniLM-L6-v2 takes seconds and hundreds of MB, so it is
+    loaded once per process. lru_cache holds the instance in a real cache
+    instead of an attribute hung on the function object, which no type
+    checker can verify and which a refactor to functools.partial (or any
+    wrapper) would silently turn back into a reload-per-call."""
+    from sentence_transformers import SentenceTransformer
+
+    return SentenceTransformer("all-MiniLM-L6-v2")
+
+
 def retrieve_relevant_context(report_id: str, fallback_text: str) -> str:
     """
     Retrieves the top-k chunks of THIS report most relevant to
@@ -91,14 +106,7 @@ def retrieve_relevant_context(report_id: str, fallback_text: str) -> str:
     degrade gracefully, not hard-fail on a missing index.
     """
     try:
-        from sentence_transformers import SentenceTransformer
-
-        model = (
-            retrieve_relevant_context._model
-            if hasattr(retrieve_relevant_context, "_model")
-            else SentenceTransformer("all-MiniLM-L6-v2")
-        )
-        retrieve_relevant_context._model = model
+        model = _embedding_model()
 
         store = get_vector_store("geo_reports")
         query_embedding = model.encode([RETRIEVAL_QUERY])[0].tolist()
@@ -124,7 +132,7 @@ def retrieve_relevant_context(report_id: str, fallback_text: str) -> str:
         return fallback_text
 
 
-def extract_fields(llm, report_text: str, hint: str = "") -> dict:
+def extract_fields(llm: LLMClient, report_text: str, hint: str = "") -> dict:
     prompt = (
         "Extract the following fields from this geological survey report as a single JSON object "
         "with keys exactly: mineral, depth_m, lat, lon, grade_g_t, hole_id.\n"
@@ -163,7 +171,10 @@ def extract_with_confidence_gate(report_id: str, report_text: str) -> dict:
             return {"status": "extracted", "record": record.model_dump(), "attempts": attempt}
         except (ValidationError, ValueError, json.JSONDecodeError) as e:
             last_error = str(e)
-            hint = f"A previous extraction attempt failed validation: {last_error}. Be precise about field types and value ranges."
+            hint = (
+                f"A previous extraction attempt failed validation: {last_error}. "
+                "Be precise about field types and value ranges."
+            )
 
     return {"status": "failed", "reason": last_error, "attempts": attempt, "report_id": report_id}
 

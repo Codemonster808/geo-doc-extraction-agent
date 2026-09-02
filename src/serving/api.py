@@ -37,7 +37,10 @@ def search(mineral: str | None = None):
     else:
         rows = con.execute("SELECT * FROM occurrences ORDER BY n_reports DESC").fetchall()
     columns = [d[0] for d in con.description] if rows or con.description else []
-    return [dict(zip(columns, r)) for r in rows]
+    # strict=True on purpose: the column list and each row come from the same
+    # cursor, so a length mismatch is a real bug (silently truncated columns),
+    # not something to paper over with a shorter dict.
+    return [dict(zip(columns, r, strict=True)) for r in rows]
 
 
 @app.get("/extract/{report_id}")

@@ -33,7 +33,7 @@ type uploadRequest struct {
 func newAwsClients(ctx context.Context) (*dynamodb.Client, *s3.Client) {
 	endpoint := os.Getenv("AWS_ENDPOINT_URL")
 	if endpoint == "" {
-		endpoint = "http://localhost:4566"
+		endpoint = "http://localhost:4585"
 	}
 	region := os.Getenv("AWS_REGION")
 	if region == "" {

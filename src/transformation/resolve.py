@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 def build_spark(app_name: str = "resolve-occurrences"):
     from pyspark.sql import SparkSession
 
-    endpoint = os.environ.get("AWS_ENDPOINT_URL", "http://localhost:4566")
+    endpoint = os.environ.get("AWS_ENDPOINT_URL", "http://localhost:4585")
     return (
         SparkSession.builder.appName(app_name)
         .master("local[2]")

@@ -128,7 +128,7 @@ El validador Pydantic rechaza lat/lon fuera del bounding box de la encuesta. Un 
 |---|---|
 | `ResourceNotFoundException` en DDB | Falta bootstrap **o** env.sh. Histórico: la tabla se creó con PK `doc_id` y el código usaba `report_id`. |
 | Retrieval vacío | No corriste `index_docs.py` o `VECTOR_BACKEND` distinto entre index y extract |
-| MiniMax `<think>` en JSON | Ya se limpia en `utils/llm/minimax.py`; si parsea mal, estás en un proveedor viejo |
+| MiniMax `<think>` en JSON | Ya se limpia en `models/llm/minimax.py`; si parsea mal, estás en un proveedor viejo |
 | IDs fijos en DDB | Contadores persisten entre corridas — usa report_ids nuevos o `uuid` |
 | S3 vacío pese a `make demo` | Normal si no pasaste por el gateway Go — el flujo de la sección 1 llama `extraction_agent` directo en Python |
 

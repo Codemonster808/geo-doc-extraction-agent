@@ -28,7 +28,9 @@ def gateway_process():
     localhost:4566 default.
     """
     if not GATEWAY_BIN.exists():
-        pytest.skip("gateway binary not built — run `cd src/ingestion/gateway && go build ./...` first")
+        pytest.skip(
+            "gateway binary not built — run `cd src/ingestion/gateway && go build ./...` first"
+        )
     proc = subprocess.Popen([str(GATEWAY_BIN)], env={**os.environ, "GIN_MODE": "release"})
     for _ in range(20):
         try:

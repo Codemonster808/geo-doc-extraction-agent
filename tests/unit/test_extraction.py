@@ -45,7 +45,11 @@ def test_coordinate_outside_survey_region_rejected():
 def test_extraction_json_parsing_from_noisy_llm_output():
     from models.extraction_agent import _extract_json
 
-    noisy = 'Here is the extraction:\n```json\n{"mineral": "Gold", "depth_m": 100}\n```\nLet me know if you need anything else.'
+    noisy = (
+        "Here is the extraction:\n```json\n"
+        '{"mineral": "Gold", "depth_m": 100}\n'
+        "```\nLet me know if you need anything else."
+    )
     parsed = _extract_json(noisy)
     assert parsed == {"mineral": "Gold", "depth_m": 100}
 

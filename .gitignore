@@ -12,6 +12,10 @@ target/
 src/gate/gate
 src/ingestion/gateway/gateway
 .chroma/
+.coverage
+coverage.xml
+.mypy_cache/
+.ruff_cache/
 
 # Personal interview-prep notes — never pushed
 docs/INTERVIEW_PREP.md

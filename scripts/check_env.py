@@ -8,7 +8,7 @@ import os  # noqa: E402
 
 from utils.checks import check_endpoint_reachable, report  # noqa: E402
 
-HEALTH_URL = os.environ.get("AWS_ENDPOINT_URL", "http://localhost:4566").rstrip("/") + "/health"
+HEALTH_URL = os.environ.get("AWS_ENDPOINT_URL", "http://localhost:4585").rstrip("/") + "/health"
 
 
 def main() -> None:

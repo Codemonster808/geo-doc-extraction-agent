@@ -135,7 +135,8 @@ def test_full_pipeline_quality(gateway_process):
     con = warehouse.connect()
     warehouse.read_parquet(con, "s3://geo-extracted/occurrences/**/*.parquet", "occurrences")
     same_site_rows = con.execute(
-        "SELECT n_reports, report_ids FROM occurrences WHERE mineral = 'Gold' AND lat_bucket = -22.5 AND lon_bucket = -68.12"
+        "SELECT n_reports, report_ids FROM occurrences "
+        "WHERE mineral = 'Gold' AND lat_bucket = -22.5 AND lon_bucket = -68.12"
     ).fetchall()
 
     report = QualityReport(pipeline="geo-doc-extraction-agent")
@@ -166,7 +167,10 @@ def test_full_pipeline_quality(gateway_process):
         "schema_rejects_out_of_region_coordinates",
         measured=1.0 if bad_coords_rejected else 0.0,
         threshold=1.0,
-        detail="a lat/lon outside the survey bounding box must fail validation even though it type-checks",
+        detail=(
+            "a lat/lon outside the survey bounding box must fail validation "
+            "even though it type-checks"
+        ),
     )
     report.check(
         Dimension.CORRECTNESS,
@@ -182,7 +186,10 @@ def test_full_pipeline_quality(gateway_process):
         "cross_document_resolution_merges_same_site",
         measured=(same_site_rows[0][0] if same_site_rows else 0),
         threshold=2,
-        detail=f"two reports at the same coordinates must resolve to n_reports=2 in one occurrence row, got {same_site_rows}",
+        detail=(
+            "two reports at the same coordinates must resolve to n_reports=2 "
+            f"in one occurrence row, got {same_site_rows}"
+        ),
     )
     report.check(
         Dimension.TIMELINESS,
