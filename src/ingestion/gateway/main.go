@@ -8,9 +8,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -116,12 +118,24 @@ func main() {
 	router.GET("/health", healthHandler)
 	router.POST("/upload", uploadHandler(ddb, s3c))
 
-	port := os.Getenv("GATEWAY_PORT")
-	if port == "" {
-		port = "8081"
+	port := 8081
+	if raw := os.Getenv("GATEWAY_PORT"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < 1 || parsed > 65535 {
+			// GATEWAY_PORT is read once at process startup from the deploy
+			// environment, not from any request — there is no attacker path
+			// to this value, only an operator typo. gosec's G706 (log
+			// injection via taint) still flags echoing it back because it
+			// can't see that distinction; #nosec is the correct tool here,
+			// not a code contortion to hide a real diagnostic from whoever
+			// misconfigured the env var. Same pattern as fintech-txn-integrity-
+			// pipeline's src/ingestion/gate/main.go.
+			log.Fatalf("invalid GATEWAY_PORT %q: must be an integer in 1-65535", raw) //#nosec G706 -- startup-only, operator-controlled env var, not attacker-reachable
+		}
+		port = parsed
 	}
-	log.Printf("intake gateway listening on :%s", port)
-	if err := router.Run(":" + port); err != nil {
+	log.Printf("intake gateway listening on :%d", port)
+	if err := router.Run(fmt.Sprintf(":%d", port)); err != nil {
 		log.Fatal(err)
 	}
 }
