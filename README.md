@@ -21,21 +21,64 @@ A confidence-gated extraction agent that turns unstructured geological survey re
 ## Architecture
 
 ```
-synthetic/public geological reports
-  → src/ingestion/gateway (Go/Gin): validate, dedupe by content hash → S3
-  → src/ingestion/index_docs.py: noisy-text chunking → embeddings → Pinecone/Chroma
-  → src/orchestration/statemachine.py drives src/models/extraction_agent.py
-    (extraction stays in Python — an LLM call doesn't fit a bare Lambda
-    runtime) between real Step Functions gate calls:
-       Plan → Extract (mineral, depth_m, lat/lon, assay grade)
-            → Validate against Pydantic domain schema (units, CRS bounds)
-            → Gate (Lambda: src/orchestration/lambdas/check_attempt.py —
-              atomic retry-attempt counter)
-            → Choice: confidence >= threshold ? emit : retry with narrowed query
-  → structured records → DynamoDB
-  → src/transformation/resolve.py (PySpark): cross-document entity resolution → S3 Parquet
-  → src/utils/warehouse.py :: DuckDB (Redshift stand-in) — queryable mineral-occurrence table
-  → src/serving/api.py :: FastAPI: /search, /extract/{doc_id}
+  synthetic/public geological reports
+             |
+             v
+  src/ingestion/gateway (Go/Gin intake gateway)
+    validate, dedupe by content hash
+             |
+             v
+        S3 (geo-docs)
+             |
+             v
+  src/ingestion/index_docs.py
+    noisy-text chunking + embeddings
+             |
+             v
+     Pinecone / Chroma
+             |
+             v
+  src/orchestration/statemachine.py drives the loop below, calling into
+  src/models/extraction_agent.py for each step (extraction stays in
+  Python here — an LLM call doesn't fit a bare Lambda runtime):
+             |
+             v
+       +-----------+
+   +-->|   Plan     |
+   |   +-----+-----+
+   |         v
+   |   +-----------+
+   |   |  Extract   |  mineral, depth_m, lat/lon, assay grade
+   |   +-----+-----+
+   |         v
+   |   +-----------+
+   |   |  Validate  |  Pydantic domain schema (units, CRS bounds)
+   |   +-----+-----+
+   |         v
+   |   Gate (Lambda): src/orchestration/lambdas/check_attempt.py
+   |     atomic retry-attempt counter
+   |         |
+   |     +---+--------------------+
+   |     v                        v
+   |  confidence high        confidence low
+   |     |                        |
+   |     v                   retry left? --no--> fail explicitly, reason recorded
+   |  DynamoDB                    |
+   |  (structured records)       yes
+   |                              |
+   +------------------------------+
+
+  src/transformation/resolve.py (PySpark)
+    cross-document entity resolution
+             |
+             v
+        S3 Parquet
+             |
+             v
+  src/utils/warehouse.py :: DuckDB (Redshift stand-in)
+             |
+             v
+  src/serving/api.py :: FastAPI --> /search  /extract/{doc_id}
 ```
 
 See `docs/architecture.md` for the diagram.
