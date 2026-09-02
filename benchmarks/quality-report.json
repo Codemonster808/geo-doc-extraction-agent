@@ -1,6 +1,6 @@
 {
   "pipeline": "geo-doc-extraction-agent",
-  "generated_at": "2026-09-01T17:12:30.725829+00:00",
+  "generated_at": "2026-09-02T17:09:46.071518+00:00",
   "score": {
     "validity": 1.0,
     "correctness": 1.0,
@@ -52,15 +52,15 @@
     {
       "dimension": "consistency",
       "name": "cross_document_resolution_merges_same_site",
-      "measured": 10,
+      "measured": 2,
       "threshold": 2,
       "passed": true,
-      "detail": "two reports at the same coordinates must resolve to n_reports=2 in one occurrence row, got [(10, ['E2E-SITE-119ca59e-a', 'E2E-SITE-119ca59e-b', 'E2E-SITE-2cdfb24b-a', 'E2E-SITE-2cdfb24b-b', 'E2E-SITE-8f225d00-a', 'E2E-SITE-8f225d00-b', 'E2E-SITE-974f9941-a', 'E2E-SITE-974f9941-b', 'E2E-SITE-ca0045c2-a', 'E2E-SITE-ca0045c2-b'])]"
+      "detail": "two reports at the same coordinates must resolve to n_reports=2 in one occurrence row, got [(2, ['E2E-SITE-68cc6f0e-a', 'E2E-SITE-68cc6f0e-b'])]"
     },
     {
       "dimension": "timeliness",
       "name": "resolve_job_under_sla",
-      "measured": 92.6,
+      "measured": 40.3,
       "threshold": 120.0,
       "passed": true,
       "detail": "PySpark cross-doc resolution wall time"

@@ -10,6 +10,7 @@ openai
 pinecone
 pydantic
 pypdf
+pyspark
 pytesseract
 pytest
 pytest-bdd
