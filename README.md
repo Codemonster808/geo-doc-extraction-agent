@@ -126,7 +126,16 @@ The intake gateway validates, rate-limits, and dedupes by content hash before a 
 2. **Confidence-gated retry, not blind retry** — the confidence threshold is calibrated against the labeled set, not picked arbitrarily.
 3. **Domain schema validation** — units (ft vs. m), coordinate reference systems, plausible value ranges. A record that passes the schema but places a mine in the ocean is a bug, not a pass.
 
-## Demo (3 minutes)
+## Installation
+
+```bash
+git clone https://github.com/Codemonster808/geo-doc-extraction-agent.git
+cd geo-doc-extraction-agent
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt   # app deps + lint/type/security tooling
+```
+
+## Usage — Demo (3 minutes)
 
 ```bash
 source env.sh
