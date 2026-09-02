@@ -22,16 +22,20 @@ A confidence-gated extraction agent that turns unstructured geological survey re
 
 ```
 synthetic/public geological reports
-  → Go/Gin intake gateway (validate, rate-limit, dedupe by content hash) → S3
-  → Lambda: OCR/parse → noisy-text chunking → embeddings → Pinecone/Chroma
-  → Step Functions extraction agent:
+  → src/ingestion/gateway (Go/Gin): validate, dedupe by content hash → S3
+  → src/ingestion/index_docs.py: noisy-text chunking → embeddings → Pinecone/Chroma
+  → src/orchestration/statemachine.py drives src/models/extraction_agent.py
+    (extraction stays in Python — an LLM call doesn't fit a bare Lambda
+    runtime) between real Step Functions gate calls:
        Plan → Extract (mineral, depth_m, lat/lon, assay grade)
             → Validate against Pydantic domain schema (units, CRS bounds)
+            → Gate (Lambda: src/orchestration/lambdas/check_attempt.py —
+              atomic retry-attempt counter)
             → Choice: confidence >= threshold ? emit : retry with narrowed query
   → structured records → DynamoDB
-  → PySpark: cross-document entity resolution → S3 Parquet
-  → Redshift: queryable mineral-occurrence table
-  → FastAPI: /search, /extract/{doc_id}
+  → src/transformation/resolve.py (PySpark): cross-document entity resolution → S3 Parquet
+  → src/utils/warehouse.py :: DuckDB (Redshift stand-in) — queryable mineral-occurrence table
+  → src/serving/api.py :: FastAPI: /search, /extract/{doc_id}
 ```
 
 See `docs/architecture.md` for the diagram.
