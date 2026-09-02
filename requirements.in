@@ -1,0 +1,19 @@
+# Direct dependencies only, unpinned — pip-compile resolves this into
+# requirements.txt, including transitive constraints. Never hand-edit
+# requirements.txt; regenerate it instead:
+#   .venv/bin/pip-compile requirements.in --output-file requirements.txt
+boto3
+chromadb
+duckdb
+fastapi
+openai
+pinecone
+pydantic
+pypdf
+pytesseract
+pytest
+pytest-bdd
+pytest-cov
+requests
+sentence-transformers
+uvicorn

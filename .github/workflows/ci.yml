@@ -39,7 +39,16 @@ jobs:
         with:
           go-version: "1.23"
       - run: pip install pip-audit
-      - run: pip-audit -r requirements.txt
+      # PYSEC-2026-311 / CVE-2026-45830 / CVE-2026-45833 / CVE-2026-45831:
+      # all four are in chromadb's HTTP server API (/api/v2/tenants/.../
+      # collections) and its multi-tenant RBAC authorization provider. This
+      # repo only ever constructs chromadb.PersistentClient (src/utils/vectors.py)
+      # — embedded, in-process, backed by a local .chroma/ directory, no HTTP
+      # server, no network listener, no tenants/RBAC involved. None of the
+      # vulnerable code paths are reachable. No fixed chromadb version exists
+      # yet (1.5.9 is latest); re-run without --ignore-vuln periodically to
+      # check.
+      - run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-311 --ignore-vuln CVE-2026-45830 --ignore-vuln CVE-2026-45833 --ignore-vuln CVE-2026-45831
       - name: Install gosec
         run: go install github.com/securego/gosec/v2/cmd/gosec@latest
       - name: Run gosec on gateway

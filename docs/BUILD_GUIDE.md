@@ -13,7 +13,7 @@ This repo reuses patterns from `agentic-claims-copilot` (Step Functions agent lo
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # app deps + lint/type/security tooling
 go version   # 1.21+
 cp ~/.config/de-portfolio/.env .env   # MINIMAX_API_KEY, PINECONE_API_KEY
 docker compose up -d
